@@ -6,7 +6,6 @@ package mustache
 
 import (
 	"fmt"
-	"math/big"
 	"strings"
 )
 
@@ -38,7 +37,10 @@ type renderer struct {
 	depth    int     // partial-recursion guard
 }
 
-const maxPartialDepth = 100_000
+// maxPartialDepth bounds partial recursion so a self-referential partial that
+// never terminates (its section always truthy) fails cleanly instead of
+// overflowing the stack. It is a var so tests can exercise the guard cheaply.
+var maxPartialDepth = 100_000
 
 // render writes the rendering of nodes to b.
 func (r *renderer) render(b *strings.Builder, nodes []node) error {
@@ -56,13 +58,13 @@ func (r *renderer) renderNode(b *strings.Builder, n *node) error {
 	case nodeText:
 		b.WriteString(n.text)
 	case nodeVar:
-		v, err := r.interpolate(n.text, n.body)
+		v, err := r.interpolate(n.text)
 		if err != nil {
 			return err
 		}
 		b.WriteString(escapeHTML(v))
 	case nodeRawVar:
-		v, err := r.interpolate(n.text, n.body)
+		v, err := r.interpolate(n.text)
 		if err != nil {
 			return err
 		}
@@ -78,8 +80,8 @@ func (r *renderer) renderNode(b *strings.Builder, n *node) error {
 }
 
 // interpolate resolves name to a string, invoking an interpolation lambda when
-// the value is one. body is the (unused) section body — nil for a variable.
-func (r *renderer) interpolate(name, body string) (string, error) {
+// the value is one.
+func (r *renderer) interpolate(name string) (string, error) {
 	v, ok := r.lookup(name)
 	if !ok {
 		return "", nil
@@ -277,11 +279,11 @@ func truthy(v Value) bool {
 	return true
 }
 
-// isEmptyList reports whether v is an empty typed slice (e.g. []string{}).
+// isEmptyList reports whether v is an empty typed slice (e.g. []string{}). The
+// []any case is handled by the callers before this is reached, so only the
+// convenience typed-slice shapes are checked here.
 func isEmptyList(v Value) bool {
 	switch val := v.(type) {
-	case []any:
-		return len(val) == 0
 	case []string:
 		return len(val) == 0
 	case []int:
@@ -348,10 +350,8 @@ func indentLines(src, indent string) string {
 }
 
 // defaultToString is the fallback used by ToString for shapes outside the
-// documented model.
+// documented model — Go's default formatting, matching a Ruby object's `to_s`
+// only loosely (such values are not expected in Mustache data).
 func defaultToString(v Value) string {
-	if bi, ok := v.(*big.Int); ok {
-		return bi.String()
-	}
 	return fmt.Sprintf("%v", v)
 }
