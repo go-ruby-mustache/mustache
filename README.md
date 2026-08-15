@@ -1,3 +1,11 @@
+> [!WARNING]
+> **DEPRECATED — this repository is a stale duplicate, kept in place (not archived) for reference.**
+>
+> The maintained source of truth is **[github.com/go-mustache/mustache](https://github.com/go-mustache/mustache)**.
+> All consumers (rbgo, jekyll, wasmbox) depend on `github.com/go-mustache/mustache`; do not add new dependencies on this `go-ruby-mustache` path.
+
+---
+
 <p align="center"><img src="https://raw.githubusercontent.com/go-ruby-mustache/brand/main/social/go-ruby-mustache-mustache.png" alt="go-ruby-mustache/mustache" width="720"></p>
 
 # mustache — go-ruby-mustache
